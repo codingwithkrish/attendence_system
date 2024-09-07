@@ -10,7 +10,7 @@ export const sendOtp = async (req: any, res: any) => {
     try {
         const {email} = req.body;
         if (!email||!email.includes("@vupune.ac.in")) {
-            return res.status(400).json({ message: "Email is required or Email not eligible",success:false });
+            return res.status(422).json({ message: "Email is required or Email not eligible",success:false });
         }
         const OTP = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, digits: true, lowerCaseAlphabets: false });
         const otp = new Otp({ email, otp: OTP });
@@ -266,15 +266,15 @@ export const verifyOtp = async (req: any, res: any) => {
     try {
         const { email, otp } = req.body;
         if (!email || !otp) {
-            return res.status(400).json({ message: "Email and OTP is required",success:false });
+            return res.status(422).json({ message: "Email and OTP is required",success:false });
         }
         const otpData = await Otp.findOne({ email });
         if (!otpData) {
-            return res.status(400).json({ message: "Invalid OTP",success:false });
+            return res.status(422).json({ message: "Invalid OTP",success:false });
         }
         const isValid = await bcrypt.compare(otp, otpData.otp);
         if (!isValid) {
-            return res.status(400).json({ message: "Invalid OTP",success:false });
+            return res.status(422).json({ message: "Invalid OTP",success:false });
         }
         await Otp.deleteOne({ email });
         return res.status(200).json({ message: "OTP verified successfully",success:true });
@@ -287,11 +287,11 @@ export const register = async (req: any, res: any) => {
     try {
         const { email, password,name,userType,gender,uniqueRollId,notificationToken,images } = req.body;
         if (!email || !password || !name || !userType || !gender || !uniqueRollId||!notificationToken||!images) {
-            return res.status(400).json({ message: "Neccesary Fields are required",success:false });
+            return res.status(422).json({ message: "Neccesary Fields are required",success:false });
         }
         let user = await User.findOne({ email });
         if (user) {
-            return res.status(400).json({ message: "User already exists",success:false });
+            return res.status(422).json({ message: "User already exists",success:false });
         }
         user = new User({userType,name,email,password,uniqueRollId,gender,notificationToken,images});
         const salt = await bcrypt.genSalt(10);
@@ -307,15 +307,15 @@ export const login = async (req: any, res: any) => {
     try {
         const { email, password,notificationToken } = req.body;
         if (!email || !password) {
-            return res.status(400).json({ message: "Email and Password is required",success:false });
+            return res.status(422).json({ message: "Email and Password is required",success:false });
         }
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Invalid Credentials",success:false });
+            return res.status(422).json({ message: "Invalid Credentials",success:false });
         }
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
-            return res.status(400).json({ message: "Invalid Credentials",success:false });
+            return res.status(422).json({ message: "Invalid Credentials",success:false });
         }
          const accessToken = await signInAccessToken(user.id);
         const refreshToken =await signRefreshToken(user.id);

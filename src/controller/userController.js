@@ -24,7 +24,7 @@ const sendOtp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email } = req.body;
         if (!email || !email.includes("@vupune.ac.in")) {
-            return res.status(400).json({ message: "Email is required or Email not eligible", success: false });
+            return res.status(422).json({ message: "Email is required or Email not eligible", success: false });
         }
         const OTP = otp_generator_1.default.generate(6, { upperCaseAlphabets: false, specialChars: false, digits: true, lowerCaseAlphabets: false });
         const otp = new otpModel_1.default({ email, otp: OTP });
@@ -282,15 +282,15 @@ const verifyOtp = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, otp } = req.body;
         if (!email || !otp) {
-            return res.status(400).json({ message: "Email and OTP is required", success: false });
+            return res.status(422).json({ message: "Email and OTP is required", success: false });
         }
         const otpData = yield otpModel_1.default.findOne({ email });
         if (!otpData) {
-            return res.status(400).json({ message: "Invalid OTP", success: false });
+            return res.status(422).json({ message: "Invalid OTP", success: false });
         }
         const isValid = yield bcryptjs_1.default.compare(otp, otpData.otp);
         if (!isValid) {
-            return res.status(400).json({ message: "Invalid OTP", success: false });
+            return res.status(422).json({ message: "Invalid OTP", success: false });
         }
         yield otpModel_1.default.deleteOne({ email });
         return res.status(200).json({ message: "OTP verified successfully", success: true });
@@ -305,11 +305,11 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, name, userType, gender, uniqueRollId, notificationToken, images } = req.body;
         if (!email || !password || !name || !userType || !gender || !uniqueRollId || !notificationToken || !images) {
-            return res.status(400).json({ message: "Neccesary Fields are required", success: false });
+            return res.status(422).json({ message: "Neccesary Fields are required", success: false });
         }
         let user = yield userModel_1.default.findOne({ email });
         if (user) {
-            return res.status(400).json({ message: "User already exists", success: false });
+            return res.status(422).json({ message: "User already exists", success: false });
         }
         user = new userModel_1.default({ userType, name, email, password, uniqueRollId, gender, notificationToken, images });
         const salt = yield bcryptjs_1.default.genSalt(10);
@@ -327,15 +327,15 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, notificationToken } = req.body;
         if (!email || !password) {
-            return res.status(400).json({ message: "Email and Password is required", success: false });
+            return res.status(422).json({ message: "Email and Password is required", success: false });
         }
         const user = yield userModel_1.default.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: "Invalid Credentials", success: false });
+            return res.status(422).json({ message: "Invalid Credentials", success: false });
         }
         const isValid = yield bcryptjs_1.default.compare(password, user.password);
         if (!isValid) {
-            return res.status(400).json({ message: "Invalid Credentials", success: false });
+            return res.status(422).json({ message: "Invalid Credentials", success: false });
         }
         const accessToken = yield (0, jwt_services_1.signInAccessToken)(user.id);
         const refreshToken = yield (0, jwt_services_1.signRefreshToken)(user.id);
