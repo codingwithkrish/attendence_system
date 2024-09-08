@@ -349,6 +349,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         return res.status(200).json({ message: "User logged in successfully", success: true, user: {
                 name: user.name,
                 email: user.email,
+                userType: user.userType,
                 userId: user._id,
                 notificationToken: notificationToken,
                 accessToken: accessToken,
