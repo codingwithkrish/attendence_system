@@ -12,10 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.joinClass = exports.createClass = void 0;
+exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
 const userModel_js_1 = __importDefault(require("../../models/userModel.js"));
 const classModel_js_1 = __importDefault(require("../../models/classModel.js"));
-// Controller function to create a new class
 // Controller function to create a new class
 const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -29,7 +28,7 @@ const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Check if the user is a student
         if (user.userType === "student") {
-            return res.status(403).json({ message: "Not Authorized" });
+            return res.status(404).json({ message: "Not Authorized" });
         }
         // Extract class data from the request body
         const { className, description, imageUrl, classCode, attendance = [], students = [], notices = [] } = req.body;
@@ -55,6 +54,29 @@ const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.createClass = createClass;
+const getAllClasses = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Get the user ID from the request (assuming it's stored in req.user._id)
+        const userId = req.user._id;
+        // Find the user by ID
+        const user = yield userModel_js_1.default.findById(userId);
+        // Check if the user exists
+        if (!user) {
+            return res.status(404).json({ message: "User not found", success: false });
+        }
+        if (user.userType === "student") {
+            const classes = yield classModel_js_1.default.find({ students: userId });
+            return res.status(200).json({ message: "Classes Fetched", success: true, data: classes });
+        }
+        const classes = yield classModel_js_1.default.find({ createdBy: user });
+        return res.status(200).json({ message: "Classes Fetched", success: true, data: classes });
+    }
+    catch (error) {
+        console.error("Error creating class:", error);
+        res.status(500).json({ message: "Internal Server Error", success: false });
+    }
+});
+exports.getAllClasses = getAllClasses;
 const joinClass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.user._id;

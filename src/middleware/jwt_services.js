@@ -20,7 +20,7 @@ const signInAccessToken = (userId) => {
     return new Promise((resolve, reject) => {
         const payload = { userId };
         const secret = process.env.ACCESS_TOKEN_SECRET || 'defaultSecret';
-        jsonwebtoken_1.default.sign(payload, secret, { expiresIn: '25s', issuer: "krishgupta.com", audience: userId.toString() }, (err, token) => {
+        jsonwebtoken_1.default.sign(payload, secret, { expiresIn: '500s', issuer: "krishgupta.com", audience: userId.toString() }, (err, token) => {
             if (err) {
                 console.log(err.message);
                 reject(http_errors_1.default.InternalServerError());

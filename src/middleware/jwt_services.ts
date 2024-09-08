@@ -6,7 +6,7 @@ export const signInAccessToken = (userId:String) => {
 return new Promise((resolve, reject) => {
     const payload = {userId};
     const secret = process.env.ACCESS_TOKEN_SECRET || 'defaultSecret';
-        jsonwebtoken.sign(payload, secret, {expiresIn:'25s',issuer:"krishgupta.com",audience:userId.toString()  }, (err, token) => {
+        jsonwebtoken.sign(payload, secret, {expiresIn:'500s',issuer:"krishgupta.com",audience:userId.toString()  }, (err, token) => {
             if (err) {
                 console.log(err.message);
                 reject(createError.InternalServerError());
