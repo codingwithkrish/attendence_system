@@ -32,13 +32,19 @@ const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Extract class data from the request body
         const { className, description, imageUrl, classCode, attendance = [], students = [], notices = [] } = req.body;
+        if (classCode.length !== 6) {
+            return res.status(400).json({ message: "Class code must be 6 characters" });
+        }
+        //random number 
+        var newclassCode = Math.floor(1000 + Math.random() * 9000);
+        newclassCode += classCode;
         // Create a new instance of the Class model
         const newClass = new classModel_js_1.default({
             createdBy: userId,
             className,
             description,
             imageUrl,
-            classCode,
+            classCode: newclassCode,
             attendance,
             students,
             notices,
