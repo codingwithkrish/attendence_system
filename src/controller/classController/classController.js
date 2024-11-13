@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
+exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
 const userModel_js_1 = __importDefault(require("../../models/userModel.js"));
 const classModel_js_1 = __importDefault(require("../../models/classModel.js"));
 // Controller function to create a new class
@@ -109,3 +109,30 @@ const joinClass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.joinClass = joinClass;
+const getClassById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user._id;
+        const user = yield userModel_js_1.default.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const { classCode } = req.body;
+        console.log("ClassCode", classCode);
+        if (!classCode) {
+            return res.status(400).json({ message: "Class code is required" });
+        }
+        const classData = yield classModel_js_1.default.findById(classCode).populate({
+            path: "createdBy",
+            select: "-password" // Exclude the password field
+        });
+        if (!classData) {
+            return res.status(404).json({ message: "Class not found" });
+        }
+        res.status(200).json({ success: true, message: "Successfully fetched class", data: classData });
+    }
+    catch (error) {
+        console.error("Error joining class:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error" });
+    }
+});
+exports.getClassById = getClassById;

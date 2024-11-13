@@ -43,6 +43,6 @@ required: true,
     }
     ]
 },{
-    timestamps: true
+    timestamps: true,
 })
 export default moduleName.model('User', userSchema)

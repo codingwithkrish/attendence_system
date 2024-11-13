@@ -9,4 +9,5 @@ const router = express_1.default.Router();
 router.get("/", classController_js_1.getAllClasses);
 router.post("/", classController_js_1.createClass);
 router.post("/joinClass", classController_js_1.joinClass);
+router.post("/getClassById", classController_js_1.getClassById);
 exports.default = router;

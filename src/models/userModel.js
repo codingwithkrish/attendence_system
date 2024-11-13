@@ -46,6 +46,6 @@ const userSchema = new mongoose_1.default.Schema({
         }
     ]
 }, {
-    timestamps: true
+    timestamps: true,
 });
 exports.default = mongoose_1.default.model('User', userSchema);

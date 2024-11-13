@@ -22,9 +22,13 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
-// Create a schema for the Class model
+const mongoose_paginate_v2_1 = __importDefault(require("mongoose-paginate-v2"));
+// Create the schema for the Class model
 const classSchema = new mongoose_1.default.Schema({
     createdBy: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -40,32 +44,27 @@ const classSchema = new mongoose_1.default.Schema({
     imageUrl: {
         type: String,
     },
-    attendance: [
-        {
+    attendance: [{
             type: String,
             default: [],
-        }
-    ],
-    students: [
-        {
+        }],
+    students: [{
             type: mongoose_1.Schema.Types.ObjectId,
             ref: 'User',
             default: [],
-        }
-    ],
+        }],
     classCode: {
         type: String,
         unique: true,
         required: true,
     },
-    notices: [
-        {
+    notices: [{
             type: String,
             default: [],
-        }
-    ]
+        }],
 }, {
     timestamps: true,
 });
-// Export the Class model
+// Apply the pagination plugin
+classSchema.plugin(mongoose_paginate_v2_1.default);
 exports.default = mongoose_1.default.model('Classes', classSchema);
