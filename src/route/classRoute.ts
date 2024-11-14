@@ -1,8 +1,19 @@
 import express from "express";
-import { createClass,joinClass,getAllClasses,getClassById} from "../controller/classController/classController.js";
+import { Server } from "socket.io";
+
+import { createClass,joinClass,getAllClasses,getClassById,getStudents,startAttendance} from "../controller/classController/classController.js";
 const router = express.Router();
-router.get("/",getAllClasses);
-router.post("/",createClass);
-router.post("/joinClass",joinClass);
-router.post("/getClassById",getClassById)
-export default router;
+export const createClassRouter = (io: any) => {
+    router.get("/", getAllClasses);
+    router.post("/", createClass);
+    router.get("/getStudents/:classId", getStudents); 
+    router.post("/joinClass", joinClass);
+    router.post("/getClassById", getClassById);
+    
+    // Pass `io` to `startAttendance`
+   router.post("/startAttendance", startAttendance(io));
+
+    return router;
+};
+
+export default createClassRouter;

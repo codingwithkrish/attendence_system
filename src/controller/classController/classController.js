@@ -12,10 +12,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
+exports.startAttendance = exports.getStudents = exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
 const userModel_js_1 = __importDefault(require("../../models/userModel.js"));
 const classModel_js_1 = __importDefault(require("../../models/classModel.js"));
-// Controller function to create a new class
+const otp_generator_1 = __importDefault(require("otp-generator"));
+const attendenModel_js_1 = __importDefault(require("../../models/attendenModel.js"));
+const locationModel_js_1 = __importDefault(require("../../models/locationModel.js"));
 const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the user ID from the request (assuming it's stored in req.user._id)
@@ -136,3 +138,120 @@ const getClassById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.getClassById = getClassById;
+const getStudents = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { classId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+    try {
+        const options = {
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
+            populate: {
+                path: 'students',
+                select: 'name email',
+            },
+        };
+        const result = yield classModel_js_1.default.paginate({ _id: classId }, options);
+        const students = result.docs.flatMap((doc) => doc.students);
+        return res.status(200).json({
+            success: true, data: {
+                totalDocs: result.totalDocs,
+                totalPages: result.totalPages,
+                currentPage: result.page,
+                docs: students,
+            }, message: 'Students fetched successfully'
+        });
+    }
+    catch (error) {
+        console.error('Error getting students:', error);
+        return res.status(500).json({ error: 'Error getting students', success: false, message: 'Internal Server Error' });
+    }
+});
+exports.getStudents = getStudents;
+// Initialize Socket.IO (assuming you have an Express server)
+const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user._id;
+        const user = yield userModel_js_1.default.findById(userId);
+        // Check if user is a teacher
+        if (!user || user.userType !== "teacher") {
+            return res.status(404).json({ message: "User not found", success: false, error: "User not found" });
+        }
+        console.log("User", user);
+        // Extract data from request
+        const { classId, lat, long, radius, time, address } = req.body;
+        if (!classId || !lat || !long || !radius || !time || !address) {
+            return res.status(400).json({ message: "Missing required fields", success: false, error: "Missing required fields" });
+        }
+        console.log("ClassId", classId);
+        const classData = yield classModel_js_1.default.findById(classId);
+        console.log("ClassId", classId);
+        if (!classData) {
+            return res.status(404).json({ message: "Class not found", success: false, error: "Class not found" });
+        }
+        // Check if the teacher is authorized for this class
+        console.log("ClassData", classData);
+        console.log("ClassData", classData.createdBy.toString());
+        console.log("UserId", userId);
+        if (classData.createdBy.toString() !== userId.toString()) {
+            return res.status(401).json({ message: "Not Authorized", success: false, error: "Not Authorized" });
+        }
+        // Generate OTP and create a location entry
+        const OTP = otp_generator_1.default.generate(4, { upperCaseAlphabets: false, specialChars: false, digits: true, lowerCaseAlphabets: false });
+        const newLocation = new locationModel_js_1.default({
+            coordinates: {
+                type: 'Point',
+                coordinates: [long, lat]
+            },
+            address: address
+        });
+        yield newLocation.save();
+        // Create attendance record
+        const newAttendance = new attendenModel_js_1.default({
+            classId,
+            timer: time,
+            locationRadius: radius,
+            otp: OTP,
+            location: newLocation._id
+        });
+        yield newAttendance.save();
+        // Add attendance to class data
+        classData.attendance.push(newAttendance._id);
+        yield classData.save();
+        // WebSocket handling
+        const classSocket = io.of(`/attendance/${classId}`);
+        classSocket.on("connection", (socket) => {
+            console.log(`New student connected for class ${classId}`);
+            // Emit the start of attendance to students
+            socket.emit("attendanceStarted", { message: "Attendance started", OTP, time });
+            // Countdown timer
+            let countdown = time;
+            const countdownInterval = setInterval(() => {
+                countdown -= 1;
+                socket.emit("countdown", { timeLeft: countdown });
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    socket.emit("attendanceEnded", { message: "Attendance session ended" });
+                    classSocket.disconnectSockets();
+                }
+            }, 1000);
+            // Handling student attendance marking
+            socket.on("markAttendance", (studentData) => __awaiter(void 0, void 0, void 0, function* () {
+                // Here you can check and process student attendance
+                console.log(`Student attendance marked: ${studentData.studentId}`);
+                // Example logic:
+                // await markStudentAttendance(studentData.studentId, classId);
+            }));
+            // Clean up on disconnect
+            socket.on("disconnect", () => {
+                console.log(`Student disconnected from class ${classId}`);
+            });
+        });
+        // Respond to the teacher
+        return res.status(200).json({ message: "Attendance started", success: true, data: newAttendance });
+    }
+    catch (error) {
+        console.error("Error starting attendance:", error);
+        return res.status(500).json({ message: "Internal Server Error", success: false, error: error });
+    }
+});
+exports.startAttendance = startAttendance;

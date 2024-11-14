@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema,PaginateModel  } from "mongoose";
 import mongoosePaginate from 'mongoose-paginate-v2';
 
 interface IClass extends Document {
@@ -6,7 +6,7 @@ interface IClass extends Document {
     className?: string;
     description?: string;
     imageUrl?: string;
-    attendance: string[];
+    attendance: mongoose.Types.ObjectId[];
     students: mongoose.Types.ObjectId[];
     classCode: string;
     notices: string[];
@@ -30,7 +30,8 @@ const classSchema = new mongoose.Schema<IClass>(
       type: String,
     },
     attendance: [{
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Attendence',
       default: [],
     }],
     students: [{
@@ -55,5 +56,7 @@ const classSchema = new mongoose.Schema<IClass>(
 
 // Apply the pagination plugin
 classSchema.plugin(mongoosePaginate);
-
-export default mongoose.model<IClass>('Classes', classSchema);
+export default mongoose.model<IClass, PaginateModel<IClass>>(
+  'Classes',
+  classSchema
+);

@@ -45,7 +45,8 @@ const classSchema = new mongoose_1.default.Schema({
         type: String,
     },
     attendance: [{
-            type: String,
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: 'Attendence',
             default: [],
         }],
     students: [{
