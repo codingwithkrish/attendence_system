@@ -234,7 +234,6 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
       classId,
       isLive: true,
     });
-
     if (existingAttendance) {
       return res.status(200).json({
         message: "Attendance session already in progress",
@@ -267,7 +266,7 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
       otp: OTP,
       location: newLocation._id,
       isLive: true,
-      startTime: new Date(), // Track session start time
+      startTime: new Date(), // Add start time to track elapsed time
     });
 
     await newAttendance.save();
@@ -278,27 +277,6 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
     const classSocket = io.of(`/attendance/${classId}`);
     const startTime = Date.now();
 
-    let isCleaningUp = false; // Prevent multiple clean-up triggers
-
-    const cleanUpSession = async () => {
-      if (isCleaningUp) return; // Skip if cleanup is already in progress
-      isCleaningUp = true;
-
-      try {
-        // Use updateOne() for efficient updating
-         classSocket.disconnectSockets();
-        classSocket.removeAllListeners();
-        await AttendanceModel.updateOne(
-          { _id: newAttendance._id },
-          { isLive: false }
-        );
-       
-        console.log(`Attendance session for class ${classId} has ended.`);
-      } catch (error) {
-        console.error("Error cleaning up attendance session:", error);
-      }
-    };
-
     classSocket.on("connection", (socket) => {
       console.log(`New student connected for class ${classId}`);
 
@@ -306,12 +284,12 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remainingTime = Math.max(time - elapsed, 0);
 
-      // Emit the current remaining time and connected user count to the newly connected user
+      // Emit the current remaining time to the newly connected user
       socket.emit("attendanceStarted", {
         message: "Attendance started",
         OTP,
         timeLeft: remainingTime,
-        connectedUsers: classSocket.sockets.size,
+        usersConnected: classSocket.sockets.size, // Send number of connected users
       });
 
       // Countdown timer
@@ -319,18 +297,25 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const remainingTime = Math.max(time - elapsed, 0);
 
-        // Emit the countdown and user count to all connected clients
-        classSocket.emit("countdown", {
-          timeLeft: remainingTime,
-          connectedUsers: classSocket.sockets.size,
-        });
+        socket.emit("countdown", { timeLeft: remainingTime, usersConnected: classSocket.sockets.size });
 
         if (remainingTime <= 0) {
           clearInterval(countdownInterval);
-          classSocket.emit("attendanceEnded", {
+
+          socket.emit("attendanceEnded", {
             message: "Attendance session ended",
           });
-          await cleanUpSession();
+
+          // Cleanup when time ends
+          classSocket.removeAllListeners();
+          classSocket.removeAllListeners("connection");
+          classSocket.disconnectSockets(); // Disconnect all sockets
+
+          // Remove namespace after attendance ends
+          io._nsps.delete(`/attendance/${classId}`);  // Remove the namespace
+
+          newAttendance.isLive = false;
+          await newAttendance.save();
         }
       }, 1000);
 
