@@ -254,40 +254,52 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
             otp: OTP,
             location: newLocation._id,
             isLive: true,
-            startTime: new Date(), // Add start time to track elapsed time
+            startTime: new Date(), // Track session start time
         });
         yield newAttendance.save();
         classData.attendance.push(newAttendance._id);
         yield classData.save();
         const classSocket = io.of(`/attendance/${classId}`);
         const startTime = Date.now();
+        const cleanUpSession = () => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                newAttendance.isLive = false;
+                yield newAttendance.save();
+                classSocket.disconnectSockets();
+                classSocket.removeAllListeners();
+                console.log(`Attendance session for class ${classId} has ended.`);
+            }
+            catch (error) {
+                console.error("Error cleaning up attendance session:", error);
+            }
+        });
         classSocket.on("connection", (socket) => {
             console.log(`New student connected for class ${classId}`);
             // Calculate remaining time for the new connection
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const remainingTime = Math.max(time - elapsed, 0);
-            // Emit the current remaining time to the newly connected user
+            // Emit the current remaining time and connected user count to the newly connected user
             socket.emit("attendanceStarted", {
                 message: "Attendance started",
                 OTP,
                 timeLeft: remainingTime,
+                connectedUsers: classSocket.sockets.size,
             });
             // Countdown timer
             const countdownInterval = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
                 const elapsed = Math.floor((Date.now() - startTime) / 1000);
                 const remainingTime = Math.max(time - elapsed, 0);
-                socket.emit("countdown", { timeLeft: remainingTime });
+                // Emit the countdown and user count to all connected clients
+                classSocket.emit("countdown", {
+                    timeLeft: remainingTime,
+                    connectedUsers: classSocket.sockets.size,
+                });
                 if (remainingTime <= 0) {
                     clearInterval(countdownInterval);
-                    socket.emit("attendanceEnded", {
+                    classSocket.emit("attendanceEnded", {
                         message: "Attendance session ended",
                     });
-                    classSocket.removeAllListeners();
-                    classSocket.removeAllListeners("connection");
-                    classSocket.disconnectSockets();
-                    classSocket.sockets.clear();
-                    newAttendance.isLive = false;
-                    yield newAttendance.save();
+                    yield cleanUpSession();
                 }
             }), 1000);
             socket.on("disconnect", () => {
