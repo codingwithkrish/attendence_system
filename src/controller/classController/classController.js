@@ -282,7 +282,10 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                     socket.emit("attendanceEnded", {
                         message: "Attendance session ended",
                     });
+                    classSocket.removeAllListeners();
+                    classSocket.removeAllListeners("connection");
                     classSocket.disconnectSockets();
+                    classSocket.sockets.clear();
                     newAttendance.isLive = false;
                     yield newAttendance.save();
                 }

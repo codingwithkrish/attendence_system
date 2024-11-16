@@ -304,7 +304,11 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
           socket.emit("attendanceEnded", {
             message: "Attendance session ended",
           });
+          classSocket.removeAllListeners();
+          classSocket.removeAllListeners("connection");
           classSocket.disconnectSockets();
+          
+          classSocket.sockets.clear();
           newAttendance.isLive = false;
           await newAttendance.save();
         }
