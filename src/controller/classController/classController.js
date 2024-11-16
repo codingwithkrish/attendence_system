@@ -261,12 +261,16 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
         yield classData.save();
         const classSocket = io.of(`/attendance/${classId}`);
         const startTime = Date.now();
+        let isCleaningUp = false; // Prevent multiple clean-up triggers
         const cleanUpSession = () => __awaiter(void 0, void 0, void 0, function* () {
+            if (isCleaningUp)
+                return; // Skip if cleanup is already in progress
+            isCleaningUp = true;
             try {
-                newAttendance.isLive = false;
-                yield newAttendance.save();
+                // Use updateOne() for efficient updating
                 classSocket.disconnectSockets();
                 classSocket.removeAllListeners();
+                yield attendenModel_js_1.default.updateOne({ _id: newAttendance._id }, { isLive: false });
                 console.log(`Attendance session for class ${classId} has ended.`);
             }
             catch (error) {

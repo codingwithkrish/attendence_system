@@ -278,12 +278,21 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
     const classSocket = io.of(`/attendance/${classId}`);
     const startTime = Date.now();
 
+    let isCleaningUp = false; // Prevent multiple clean-up triggers
+
     const cleanUpSession = async () => {
+      if (isCleaningUp) return; // Skip if cleanup is already in progress
+      isCleaningUp = true;
+
       try {
-        newAttendance.isLive = false;
-        await newAttendance.save();
-        classSocket.disconnectSockets();
+        // Use updateOne() for efficient updating
+         classSocket.disconnectSockets();
         classSocket.removeAllListeners();
+        await AttendanceModel.updateOne(
+          { _id: newAttendance._id },
+          { isLive: false }
+        );
+       
         console.log(`Attendance session for class ${classId} has ended.`);
       } catch (error) {
         console.error("Error cleaning up attendance session:", error);
