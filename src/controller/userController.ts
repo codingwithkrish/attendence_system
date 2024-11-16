@@ -297,7 +297,7 @@ export const register = async (req: any, res: any) => {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
         await user.save();
-        return res.status(200).json({ message: "User registered successfully.Please Login",success:true });
+        return res.status(200).json({ message: "User registered successfully.Please Login",success:true,data:{userId:user.id} });
     } catch (error) {
         console.log(error)
         return res.status(500).json({ message: "Unable to register user",success:false,error:error });

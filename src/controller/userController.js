@@ -315,7 +315,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const salt = yield bcryptjs_1.default.genSalt(10);
         user.password = yield bcryptjs_1.default.hash(user.password, salt);
         yield user.save();
-        return res.status(200).json({ message: "User registered successfully.Please Login", success: true });
+        return res.status(200).json({ message: "User registered successfully.Please Login", success: true, data: { userId: user.id } });
     }
     catch (error) {
         console.log(error);

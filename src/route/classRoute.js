@@ -15,6 +15,7 @@ const createClassRouter = (io) => {
     router.post("/getClassById", classController_js_1.getClassById);
     // Pass `io` to `startAttendance`
     router.post("/startAttendance", (0, classController_js_1.startAttendance)(io));
+    router.post("/verifyAttendance", classController_js_1.verifyLocations);
     return router;
 };
 exports.createClassRouter = createClassRouter;

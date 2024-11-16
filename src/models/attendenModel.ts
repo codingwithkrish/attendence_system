@@ -1,4 +1,4 @@
-import moduleName from 'mongoose';
+import moduleName,{ Document, Schema,} from 'mongoose';
 import dayjs from 'dayjs';
 
 const attendenSchema = new moduleName.Schema({
@@ -9,14 +9,14 @@ const attendenSchema = new moduleName.Schema({
   },
   attendance: [
     {
-      type: moduleName.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       default: [],
     },
   ],
   attendanceTried: [
     {
-      type: moduleName.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       default: [],
     },
@@ -32,6 +32,11 @@ const attendenSchema = new moduleName.Schema({
   locationRadius:{
     type: Number,
     required: true,
+  },
+  location:{
+      type: Schema.Types.ObjectId,
+      ref: 'Location',
+      required: true,
   },
   isLive: {
     type: Boolean,

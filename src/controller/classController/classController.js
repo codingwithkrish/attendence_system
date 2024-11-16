@@ -12,12 +12,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startAttendance = exports.getStudents = exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
+exports.verifyLocations = exports.startAttendance = exports.getStudents = exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
 const userModel_js_1 = __importDefault(require("../../models/userModel.js"));
 const classModel_js_1 = __importDefault(require("../../models/classModel.js"));
 const otp_generator_1 = __importDefault(require("otp-generator"));
 const attendenModel_js_1 = __importDefault(require("../../models/attendenModel.js"));
 const locationModel_js_1 = __importDefault(require("../../models/locationModel.js"));
+const geolib_1 = require("geolib");
 const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Get the user ID from the request (assuming it's stored in req.user._id)
@@ -33,11 +34,13 @@ const createClass = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(404).json({ message: "Not Authorized" });
         }
         // Extract class data from the request body
-        const { className, description, imageUrl, classCode, attendance = [], students = [], notices = [] } = req.body;
+        const { className, description, imageUrl, classCode, attendance = [], students = [], notices = [], } = req.body;
         if (classCode.length !== 6) {
-            return res.status(400).json({ message: "Class code must be 6 characters" });
+            return res
+                .status(400)
+                .json({ message: "Class code must be 6 characters" });
         }
-        //random number 
+        //random number
         var newclassCode = Math.floor(1000 + Math.random() * 9000);
         newclassCode += classCode;
         // Create a new instance of the Class model
@@ -70,14 +73,20 @@ const getAllClasses = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const user = yield userModel_js_1.default.findById(userId);
         // Check if the user exists
         if (!user) {
-            return res.status(404).json({ message: "User not found", success: false });
+            return res
+                .status(404)
+                .json({ message: "User not found", success: false });
         }
         if (user.userType === "student") {
             const classes = yield classModel_js_1.default.find({ students: userId });
-            return res.status(200).json({ message: "Classes Fetched", success: true, data: classes });
+            return res
+                .status(200)
+                .json({ message: "Classes Fetched", success: true, data: classes });
         }
         const classes = yield classModel_js_1.default.find({ createdBy: user });
-        return res.status(200).json({ message: "Classes Fetched", success: true, data: classes });
+        return res
+            .status(200)
+            .json({ message: "Classes Fetched", success: true, data: classes });
     }
     catch (error) {
         console.error("Error creating class:", error);
@@ -125,12 +134,16 @@ const getClassById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         const classData = yield classModel_js_1.default.findById(classCode).populate({
             path: "createdBy",
-            select: "-password" // Exclude the password field
+            select: "-password", // Exclude the password field
         });
         if (!classData) {
             return res.status(404).json({ message: "Class not found" });
         }
-        res.status(200).json({ success: true, message: "Successfully fetched class", data: classData });
+        res.status(200).json({
+            success: true,
+            message: "Successfully fetched class",
+            data: classData,
+        });
     }
     catch (error) {
         console.error("Error joining class:", error);
@@ -146,24 +159,30 @@ const getStudents = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             page: parseInt(page, 10),
             limit: parseInt(limit, 10),
             populate: {
-                path: 'students',
-                select: 'name email',
+                path: "students",
+                select: "name email",
             },
         };
         const result = yield classModel_js_1.default.paginate({ _id: classId }, options);
         const students = result.docs.flatMap((doc) => doc.students);
         return res.status(200).json({
-            success: true, data: {
+            success: true,
+            data: {
                 totalDocs: result.totalDocs,
                 totalPages: result.totalPages,
                 currentPage: result.page,
                 docs: students,
-            }, message: 'Students fetched successfully'
+            },
+            message: "Students fetched successfully",
         });
     }
     catch (error) {
-        console.error('Error getting students:', error);
-        return res.status(500).json({ error: 'Error getting students', success: false, message: 'Internal Server Error' });
+        console.error("Error getting students:", error);
+        return res.status(500).json({
+            error: "Error getting students",
+            success: false,
+            message: "Internal Server Error",
+        });
     }
 });
 exports.getStudents = getStudents;
@@ -174,35 +193,67 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
         const user = yield userModel_js_1.default.findById(userId);
         // Check if user is a teacher
         if (!user || user.userType !== "teacher") {
-            return res.status(404).json({ message: "User not found", success: false, error: "User not found" });
+            return res.status(404).json({
+                message: "User not found",
+                success: false,
+                error: "User not found",
+            });
         }
         console.log("User", user);
         // Extract data from request
         const { classId, lat, long, radius, time, address } = req.body;
         if (!classId || !lat || !long || !radius || !time || !address) {
-            return res.status(400).json({ message: "Missing required fields", success: false, error: "Missing required fields" });
+            return res.status(400).json({
+                message: "Missing required fields",
+                success: false,
+                error: "Missing required fields",
+            });
         }
         console.log("ClassId", classId);
         const classData = yield classModel_js_1.default.findById(classId);
         console.log("ClassId", classId);
         if (!classData) {
-            return res.status(404).json({ message: "Class not found", success: false, error: "Class not found" });
+            return res.status(404).json({
+                message: "Class not found",
+                success: false,
+                error: "Class not found",
+            });
         }
         // Check if the teacher is authorized for this class
         console.log("ClassData", classData);
         console.log("ClassData", classData.createdBy.toString());
         console.log("UserId", userId);
         if (classData.createdBy.toString() !== userId.toString()) {
-            return res.status(401).json({ message: "Not Authorized", success: false, error: "Not Authorized" });
+            return res.status(401).json({
+                message: "Not Authorized",
+                success: false,
+                error: "Not Authorized",
+            });
+        }
+        const existingAttendance = yield attendenModel_js_1.default.findOne({
+            classId,
+            isLive: true,
+        });
+        if (existingAttendance) {
+            return res.status(200).json({
+                message: "Attendance session already in progress",
+                success: true,
+                data: existingAttendance,
+            });
         }
         // Generate OTP and create a location entry
-        const OTP = otp_generator_1.default.generate(4, { upperCaseAlphabets: false, specialChars: false, digits: true, lowerCaseAlphabets: false });
+        const OTP = otp_generator_1.default.generate(4, {
+            upperCaseAlphabets: false,
+            specialChars: false,
+            digits: true,
+            lowerCaseAlphabets: false,
+        });
         const newLocation = new locationModel_js_1.default({
             coordinates: {
-                type: 'Point',
-                coordinates: [long, lat]
+                type: "Point",
+                coordinates: [long, lat],
             },
-            address: address
+            address: address,
         });
         yield newLocation.save();
         // Create attendance record
@@ -211,8 +262,9 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
             timer: time,
             locationRadius: radius,
             otp: OTP,
-            location: newLocation._id
+            location: newLocation._id,
         });
+        newAttendance.isLive = true;
         yield newAttendance.save();
         // Add attendance to class data
         classData.attendance.push(newAttendance._id);
@@ -222,18 +274,27 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
         classSocket.on("connection", (socket) => {
             console.log(`New student connected for class ${classId}`);
             // Emit the start of attendance to students
-            socket.emit("attendanceStarted", { message: "Attendance started", OTP, time });
+            socket.emit("attendanceStarted", {
+                message: "Attendance started",
+                OTP,
+                time,
+            });
             // Countdown timer
             let countdown = time;
-            const countdownInterval = setInterval(() => {
+            const countdownInterval = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
                 countdown -= 1;
+                console.log(`Time left: ${countdown}`);
                 socket.emit("countdown", { timeLeft: countdown });
                 if (countdown <= 0) {
                     clearInterval(countdownInterval);
-                    socket.emit("attendanceEnded", { message: "Attendance session ended" });
+                    socket.emit("attendanceEnded", {
+                        message: "Attendance session ended",
+                    });
                     classSocket.disconnectSockets();
+                    newAttendance.isLive = false;
+                    yield newAttendance.save();
                 }
-            }, 1000);
+            }), 1000);
             // Handling student attendance marking
             socket.on("markAttendance", (studentData) => __awaiter(void 0, void 0, void 0, function* () {
                 // Here you can check and process student attendance
@@ -247,11 +308,101 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
             });
         });
         // Respond to the teacher
-        return res.status(200).json({ message: "Attendance started", success: true, data: newAttendance });
+        return res.status(200).json({
+            message: "Attendance started",
+            success: true,
+            data: newAttendance,
+        });
     }
     catch (error) {
         console.error("Error starting attendance:", error);
-        return res.status(500).json({ message: "Internal Server Error", success: false, error: error });
+        return res
+            .status(500)
+            .json({ message: "Internal Server Error", success: false, error: error });
     }
 });
 exports.startAttendance = startAttendance;
+const verifyLocations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user._id;
+        const user = yield userModel_js_1.default.findById(userId);
+        const { attendenceId, lat, long, otp } = req.body;
+        if (!user || user.userType !== "student") {
+            return res.status(404).json({
+                message: "User not found",
+                success: false,
+                error: "User not found",
+            });
+        }
+        if (!attendenceId || !lat || !long || !otp) {
+            return res.status(400).json({
+                message: "Missing required fields",
+                success: false,
+                error: "Missing required fields",
+            });
+        }
+        const attendance = yield attendenModel_js_1.default.findById(attendenceId).populate({
+            path: "location",
+        });
+        if (!attendance) {
+            return res
+                .status(404)
+                .json({ message: "Attendance not found", success: false });
+        }
+        if (!attendance.isLive) {
+            return res
+                .status(400)
+                .json({ message: "Attendance session has ended", success: false });
+        }
+        const location = (yield locationModel_js_1.default.findById(attendance.location));
+        if (!location || !location.coordinates || !location.coordinates) {
+            return res
+                .status(404)
+                .json({ message: "Location not found", success: false });
+        }
+        // Validate OTP
+        if (attendance.otp !== parseInt(otp)) {
+            return res.status(400).json({ message: "Invalid OTP", success: false });
+        }
+        console.log("Attendance", attendance);
+        console.log("Location", location.coordinates.coordinates);
+        // Extract teacher's location and radius from the attendance document
+        const [teacherLat, teacherLong] = location.coordinates.coordinates;
+        console.log("TeacherLong", teacherLong);
+        console.log("TeacherLat", teacherLat);
+        // Calculate the distance between the teacher and the student
+        const distance = (0, geolib_1.getDistance)({ latitude: teacherLat, longitude: teacherLong }, // Teacher's coordinates
+        { latitude: parseFloat(lat), longitude: parseFloat(long) } // Student's coordinates
+        );
+        console.log("Distance", distance);
+        const radius = attendance.locationRadius || 10; // Radius in meters
+        if (distance <= radius) {
+            console.log("Attendance Success");
+            if (!attendance.attendance.includes(userId)) {
+                attendance.attendance.push(userId);
+                yield attendance.save();
+            }
+            return res
+                .status(200)
+                .json({ message: "Attendance marked successfully", success: true });
+        }
+        else {
+            console.log("Attendance Success1");
+            if (!attendance.attendanceTried.includes(userId)) {
+                attendance.attendanceTried.push(userId);
+                yield attendance.save();
+            }
+            return res.status(400).json({
+                message: "You are not within the required radius",
+                success: false,
+            });
+        }
+    }
+    catch (error) {
+        console.error("Error verifying locations:", error);
+        return res
+            .status(500)
+            .json({ message: "Internal Server Error", success: false, error: error });
+    }
+});
+exports.verifyLocations = verifyLocations;
