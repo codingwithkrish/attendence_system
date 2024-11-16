@@ -199,8 +199,6 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                 error: "User not found",
             });
         }
-        console.log("User", user);
-        // Extract data from request
         const { classId, lat, long, radius, time, address } = req.body;
         if (!classId || !lat || !long || !radius || !time || !address) {
             return res.status(400).json({
@@ -209,9 +207,7 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                 error: "Missing required fields",
             });
         }
-        console.log("ClassId", classId);
         const classData = yield classModel_js_1.default.findById(classId);
-        console.log("ClassId", classId);
         if (!classData) {
             return res.status(404).json({
                 message: "Class not found",
@@ -219,10 +215,6 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                 error: "Class not found",
             });
         }
-        // Check if the teacher is authorized for this class
-        console.log("ClassData", classData);
-        console.log("ClassData", classData.createdBy.toString());
-        console.log("UserId", userId);
         if (classData.createdBy.toString() !== userId.toString()) {
             return res.status(401).json({
                 message: "Not Authorized",
@@ -241,7 +233,6 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                 data: existingAttendance,
             });
         }
-        // Generate OTP and create a location entry
         const OTP = otp_generator_1.default.generate(4, {
             upperCaseAlphabets: false,
             specialChars: false,
@@ -253,39 +244,40 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                 type: "Point",
                 coordinates: [long, lat],
             },
-            address: address,
+            address,
         });
         yield newLocation.save();
-        // Create attendance record
         const newAttendance = new attendenModel_js_1.default({
             classId,
             timer: time,
             locationRadius: radius,
             otp: OTP,
             location: newLocation._id,
+            isLive: true,
+            startTime: new Date(), // Add start time to track elapsed time
         });
-        newAttendance.isLive = true;
         yield newAttendance.save();
-        // Add attendance to class data
         classData.attendance.push(newAttendance._id);
         yield classData.save();
-        // WebSocket handling
         const classSocket = io.of(`/attendance/${classId}`);
+        const startTime = Date.now();
         classSocket.on("connection", (socket) => {
             console.log(`New student connected for class ${classId}`);
-            // Emit the start of attendance to students
+            // Calculate remaining time for the new connection
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const remainingTime = Math.max(time - elapsed, 0);
+            // Emit the current remaining time to the newly connected user
             socket.emit("attendanceStarted", {
                 message: "Attendance started",
                 OTP,
-                time,
+                timeLeft: remainingTime,
             });
             // Countdown timer
-            let countdown = time;
             const countdownInterval = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
-                countdown -= 1;
-                console.log(`Time left: ${countdown}`);
-                socket.emit("countdown", { timeLeft: countdown });
-                if (countdown <= 0) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const remainingTime = Math.max(time - elapsed, 0);
+                socket.emit("countdown", { timeLeft: remainingTime });
+                if (remainingTime <= 0) {
                     clearInterval(countdownInterval);
                     socket.emit("attendanceEnded", {
                         message: "Attendance session ended",
@@ -295,19 +287,10 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
                     yield newAttendance.save();
                 }
             }), 1000);
-            // Handling student attendance marking
-            socket.on("markAttendance", (studentData) => __awaiter(void 0, void 0, void 0, function* () {
-                // Here you can check and process student attendance
-                console.log(`Student attendance marked: ${studentData.studentId}`);
-                // Example logic:
-                // await markStudentAttendance(studentData.studentId, classId);
-            }));
-            // Clean up on disconnect
             socket.on("disconnect", () => {
                 console.log(`Student disconnected from class ${classId}`);
             });
         });
-        // Respond to the teacher
         return res.status(200).json({
             message: "Attendance started",
             success: true,
@@ -316,9 +299,11 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
     }
     catch (error) {
         console.error("Error starting attendance:", error);
-        return res
-            .status(500)
-            .json({ message: "Internal Server Error", success: false, error: error });
+        return res.status(500).json({
+            message: "Internal Server Error",
+            success: false,
+            error,
+        });
     }
 });
 exports.startAttendance = startAttendance;
