@@ -394,7 +394,7 @@ export const verifyLocations = async (req: any, res: any) => {
 
     console.log("Location", location.coordinates.coordinates);
     // Extract teacher's location and radius from the attendance document
-    const [teacherLat, teacherLong] = location.coordinates.coordinates;
+    const [ teacherLong,teacherLat] = location.coordinates.coordinates;
     console.log("TeacherLong", teacherLong);
     console.log("TeacherLat", teacherLat);
 

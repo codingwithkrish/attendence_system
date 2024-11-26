@@ -358,7 +358,7 @@ const verifyLocations = (req, res) => __awaiter(void 0, void 0, void 0, function
         console.log("Attendance", attendance);
         console.log("Location", location.coordinates.coordinates);
         // Extract teacher's location and radius from the attendance document
-        const [teacherLat, teacherLong] = location.coordinates.coordinates;
+        const [teacherLong, teacherLat] = location.coordinates.coordinates;
         console.log("TeacherLong", teacherLong);
         console.log("TeacherLat", teacherLat);
         // Calculate the distance between the teacher and the student
