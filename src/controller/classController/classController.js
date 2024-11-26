@@ -277,7 +277,7 @@ const startAttendance = (io) => (req, res) => __awaiter(void 0, void 0, void 0, 
             const countdownInterval = setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
                 const elapsed = Math.floor((Date.now() - startTime) / 1000);
                 const remainingTime = Math.max(time - elapsed, 0);
-                socket.emit("countdown", { timeLeft: remainingTime, usersConnected: classSocket.sockets.size });
+                socket.emit("countdown", { timeLeft: remainingTime, usersConnected: classSocket.sockets.size, attendenceId: newAttendance._id });
                 if (remainingTime <= 0) {
                     clearInterval(countdownInterval);
                     socket.emit("attendanceEnded", {
