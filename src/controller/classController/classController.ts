@@ -297,7 +297,7 @@ export const startAttendance = (io: Server) => async (req: any, res: any) => {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         const remainingTime = Math.max(time - elapsed, 0);
 
-        socket.emit("countdown", { timeLeft: remainingTime, usersConnected: classSocket.sockets.size });
+        socket.emit("countdown", { timeLeft: remainingTime, usersConnected: classSocket.sockets.size,attendenceId: newAttendance._id});
 
         if (remainingTime <= 0) {
           clearInterval(countdownInterval);
