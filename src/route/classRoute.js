@@ -9,6 +9,8 @@ const classController_js_1 = require("../controller/classController/classControl
 const router = express_1.default.Router();
 const createClassRouter = (io) => {
     router.get("/", classController_js_1.getAllClasses);
+    router.get("/getAttendence/:classId", classController_js_1.getAttendance);
+    router.get("/getStudentAttendence/:attendanceId", classController_js_1.getStudentAttendanceById);
     router.post("/", classController_js_1.createClass);
     router.get("/getStudents/:classId", classController_js_1.getStudents);
     router.post("/joinClass", classController_js_1.joinClass);

@@ -432,4 +432,72 @@ export const verifyLocations = async (req: any, res: any) => {
       .status(500)
       .json({ message: "Internal Server Error", success: false, error: error });
   }
+
+
+
 };
+
+
+
+export const getAttendance = async (req: any, res: any) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const { classId } = req.params;
+    if (!classId) {
+      return res.status(400).json({ message: "Class ID is required" });
+    }
+    const classData = await Class.findById(classId);
+    if (!classData) {
+      return res.status(404).json({ message: "Class not found" });
+    }
+    const attendance = await AttendanceModel.find({ classId });
+    return res.status(200).json({
+      message: "Attendance fetched successfully",
+      success: true,
+      data: attendance,
+    });
+  } catch (error) {
+    console.error("Error getting attendance:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+      error,
+    });
+  }
+
+}
+
+export const getStudentAttendanceById = async (req: any, res: any) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const {  attendanceId } = req.params;
+    if (!attendanceId) {
+      return res.status(400).json({ message: "Attendance ID is required" });
+    }
+    const attendance = await AttendanceModel.findById(attendanceId).populate({ path: "attendanceTried attendance", select: "name email uniqueRollId", });
+    if (!attendance) {
+      return res.status(404).json({ message: "Attendance not found" });
+    }
+    const noOfStudentAttended = attendance.attendance;
+    return res.status(200).json({
+      message: "Attendance fetched successfully",
+      success: true,
+      data: noOfStudentAttended,
+    });
+  } catch (error) {
+    console.error("Error getting attendance:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      success: false,
+      error,
+    });
+  }
+}

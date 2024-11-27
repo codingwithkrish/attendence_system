@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.verifyLocations = exports.startAttendance = exports.getStudents = exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
+exports.getStudentAttendanceById = exports.getAttendance = exports.verifyLocations = exports.startAttendance = exports.getStudents = exports.getClassById = exports.joinClass = exports.getAllClasses = exports.createClass = void 0;
 const userModel_js_1 = __importDefault(require("../../models/userModel.js"));
 const classModel_js_1 = __importDefault(require("../../models/classModel.js"));
 const otp_generator_1 = __importDefault(require("otp-generator"));
@@ -397,3 +397,67 @@ const verifyLocations = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.verifyLocations = verifyLocations;
+const getAttendance = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user._id;
+        const user = yield userModel_js_1.default.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const { classId } = req.params;
+        if (!classId) {
+            return res.status(400).json({ message: "Class ID is required" });
+        }
+        const classData = yield classModel_js_1.default.findById(classId);
+        if (!classData) {
+            return res.status(404).json({ message: "Class not found" });
+        }
+        const attendance = yield attendenModel_js_1.default.find({ classId });
+        return res.status(200).json({
+            message: "Attendance fetched successfully",
+            success: true,
+            data: attendance,
+        });
+    }
+    catch (error) {
+        console.error("Error getting attendance:", error);
+        return res.status(500).json({
+            message: "Internal Server Error",
+            success: false,
+            error,
+        });
+    }
+});
+exports.getAttendance = getAttendance;
+const getStudentAttendanceById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.user._id;
+        const user = yield userModel_js_1.default.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const { attendanceId } = req.params;
+        if (!attendanceId) {
+            return res.status(400).json({ message: "Attendance ID is required" });
+        }
+        const attendance = yield attendenModel_js_1.default.findById(attendanceId).populate({ path: "attendanceTried attendance", select: "name email uniqueRollId", });
+        if (!attendance) {
+            return res.status(404).json({ message: "Attendance not found" });
+        }
+        const noOfStudentAttended = attendance.attendance;
+        return res.status(200).json({
+            message: "Attendance fetched successfully",
+            success: true,
+            data: noOfStudentAttended,
+        });
+    }
+    catch (error) {
+        console.error("Error getting attendance:", error);
+        return res.status(500).json({
+            message: "Internal Server Error",
+            success: false,
+            error,
+        });
+    }
+});
+exports.getStudentAttendanceById = getStudentAttendanceById;
